@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Shift Monitor — Console</title>
+<meta name="description" content="Shift monitor console: investigation, latency model and permission position. Static single page.">
+<style>:root{color-scheme:light dark}*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;font:15px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}img,svg,video{max-width:100%;height:auto}button,input,select,textarea{font:inherit;color:inherit}table{border-collapse:collapse}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f2f4f7; --panel:#ffffff; --panel2:#f7f9fb; --head:#eef1f5;
+  --line:#d8dee6; --line2:#bcc6d2;
+  --fg:#131920; --fg2:#4a5560; --fg3:#78828e;
+  --acc:#1f5fb8; --accbg:#e7effb;
+  --ok:#2d6e49; --okbg:#e6f3ec; --warn:#8a6512; --warnbg:#fbf1da;
+  --bad:#a93c31; --badbg:#fbeae8; --mute:#6a7482; --mutebg:#eef1f5;
+  --sans:"IBM Plex Sans",ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1319; --panel:#161d25; --panel2:#1b242e; --head:#1b242e;
+  --line:#2b3642; --line2:#3b4857;
+  --fg:#e6ecf3; --fg2:#a9b4c0; --fg3:#7d8896;
+  --acc:#6fa2e8; --accbg:#152338;
+  --ok:#74c195; --okbg:#152519; --warn:#d6a648; --warnbg:#2a2213;
+  --bad:#e0837a; --badbg:#2b1715; --mute:#8c96a3; --mutebg:#1b242e;
+}}
+:root[data-theme="dark"]{
+  --bg:#0e1319; --panel:#161d25; --panel2:#1b242e; --head:#1b242e;
+  --line:#2b3642; --line2:#3b4857;
+  --fg:#e6ecf3; --fg2:#a9b4c0; --fg3:#7d8896;
+  --acc:#6fa2e8; --accbg:#152338;
+  --ok:#74c195; --okbg:#152519; --warn:#d6a648; --warnbg:#2a2213;
+  --bad:#e0837a; --badbg:#2b1715; --mute:#8c96a3; --mutebg:#1b242e;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 var(--sans);
+  -webkit-text-size-adjust:100%}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 56px}
+
+header{border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:20}
+.hin{max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
+.brand{font-weight:700;font-size:14px;letter-spacing:-.01em}
+.meta{font:500 11.5px/1 var(--mono);color:var(--fg3)}
+.spacer{flex:1}
+button{font:inherit;color:inherit}
+.tgl{background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+  padding:5px 10px;font:500 12px var(--sans);cursor:pointer}
+.tgl:hover{border-color:var(--line2)}
+
+.banner{background:var(--warnbg);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);
+  border-radius:7px;padding:9px 12px;margin:14px 0 0;font-size:12.5px;color:var(--fg2)}
+.banner b{color:var(--fg)}
+
+nav{display:flex;gap:2px;margin:16px 0 0;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 13px;
+  cursor:pointer;color:var(--fg3);font:600 13px var(--sans);white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--acc)}
+nav button:hover{color:var(--fg2)}
+
+h2{font-size:15px;margin:22px 0 3px;letter-spacing:-.01em}
+h3{font-size:13px;margin:18px 0 6px;color:var(--fg2);text-transform:uppercase;letter-spacing:.07em}
+.note{color:var(--fg2);font-size:12.5px;margin:0 0 12px;max-width:74ch}
+.grid{display:grid;gap:12px}
+@media(min-width:860px){.g2{grid-template-columns:1fr 1fr}.g32{grid-template-columns:1.55fr 1fr}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.card>.ch{padding:9px 12px;border-bottom:1px solid var(--line);background:var(--head);
+  border-radius:8px 8px 0 0;font:600 12px var(--sans);display:flex;gap:10px;align-items:center}
+.card>.cb{padding:12px}
+.ch .meta{margin-left:auto}
+
+table{width:100%;border-collapse:collapse;font:500 12px/1.45 var(--mono)}
+th{text-align:left;font:600 10.5px/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;
+  color:var(--fg3);padding:0 10px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tr.hl td{background:var(--accbg)}
+.scroll{overflow-x:auto}
+
+.pill{display:inline-block;padding:1px 7px;border-radius:999px;font:600 10.5px/1.7 var(--sans);
+  letter-spacing:.02em;white-space:nowrap}
+.p-ok{background:var(--okbg);color:var(--ok)}
+.p-warn{background:var(--warnbg);color:var(--warn)}
+.p-bad{background:var(--badbg);color:var(--bad)}
+.p-mute{background:var(--mutebg);color:var(--mute)}
+.p-acc{background:var(--accbg);color:var(--acc)}
+
+.log{font:500 11.5px/1.75 var(--mono);background:var(--panel2);border:1px solid var(--line);
+  border-radius:6px;padding:10px 12px;max-height:290px;overflow:auto;white-space:pre-wrap;
+  word-break:break-word}
+.log .t{color:var(--fg3)} .log .g{color:var(--ok)} .log .w{color:var(--warn)}
+.log .b{color:var(--bad)} .log .a{color:var(--acc)}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font:500 12px var(--mono)}
+.kv dt{color:var(--fg3)} .kv dd{margin:0}
+
+.ctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:7px 14px;
+  font:600 12.5px var(--sans);cursor:pointer}
+.btn:hover{filter:brightness(1.08)} .btn[disabled]{opacity:.45;cursor:default;filter:none}
+.btn2{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 12px;
+  font:600 12.5px var(--sans);cursor:pointer}
+input[type=range]{width:100%;accent-color:var(--acc)}
+
+.big{font:700 26px/1 var(--mono);letter-spacing:-.02em}
+.bigl{font:600 10.5px/1 var(--sans);text-transform:uppercase;letter-spacing:.07em;color:var(--fg3);
+  margin-top:6px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:11px 12px}
+.stats{display:grid;gap:9px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:620px){.stats{grid-template-columns:repeat(4,1fr)}}
+
+.bar{display:flex;height:22px;border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block} .bar .w{background:var(--warn)} .bar .h{background:var(--acc)}
+.bar .s{background:var(--ok)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--fg2);margin-top:8px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+
+blockquote{margin:9px 0;padding:9px 13px;border-left:3px solid var(--acc);background:var(--panel2);
+  font:500 12.5px/1.6 var(--mono);color:var(--fg)}
+code{font:500 12px var(--mono);background:var(--panel2);border:1px solid var(--line);
+  border-radius:4px;padding:1px 5px}
+pre{font:500 11.5px/1.6 var(--mono);background:var(--panel2);border:1px solid var(--line);
+  border-radius:6px;padding:11px 13px;overflow:auto;margin:9px 0}
+ul{margin:8px 0;padding-left:20px} li{margin:4px 0;font-size:13px;color:var(--fg2)}
+li b{color:var(--fg)}
+footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);
+  color:var(--fg3);font-size:11.5px}
+.strike{text-decoration:line-through;text-decoration-color:var(--bad);text-decoration-thickness:2px}
+</style>
+</head>
+<body>
+<header><div class="hin">
+  <span class="dot" id="dot"></span>
+  <span class="brand">shift-monitor</span>
+  <span class="meta" id="hmeta">account primary · surface unconfirmed · mode NOTIFY_CONFIRM</span>
+  <span class="spacer"></span>
+  <button class="tgl" id="theme">dark</button>
+</div></header>
+
+<div class="wrap">
+<div class="banner"><b>Worked-example data.</b> Every figure on this page is a design
+target or labelled example. Nothing here was measured against a Randstad account,
+because nothing has been run against one. Built 3 November 2026 from public sources only.</div>
+
+<nav role="tablist">
+  <button role="tab" id="t1" aria-selected="true"  aria-controls="p1">Monitor</button>
+  <button role="tab" id="t2" aria-selected="false" aria-controls="p2">Latency</button>
+  <button role="tab" id="t3" aria-selected="false" aria-controls="p3">Permission</button>
+  <button role="tab" id="t4" aria-selected="false" aria-controls="p4">What I checked</button>
+</nav>
+
+<!-- ============ MONITOR ============ -->
+<section id="p1" role="tabpanel" aria-labelledby="t1">
+<h2>Run console</h2>
+<p class="note">Paused at poll tick 2,041, the moment a matching shift was detected.
+The gate held it at NOTIFY_CONFIRM because no written permission reference is
+configured. Press Resume to step through the rest, including the ticks that fail.</p>
+
+<div class="stats">
+  <div class="stat"><div class="big" id="s-up">41h 12m</div><div class="bigl">uptime</div></div>
+  <div class="stat"><div class="big" id="s-polls">2,041</div><div class="bigl">polls</div></div>
+  <div class="stat"><div class="big" id="s-new">7</div><div class="bigl">new shifts seen</div></div>
+  <div class="stat"><div class="big" id="s-acc">1</div><div class="bigl">accepted</div></div>
+</div>
+
+<div class="grid g32" style="margin-top:12px">
+  <div class="card">
+    <div class="ch">Poll log <span class="meta" id="logmeta">tick 2041 · paused</span></div>
+    <div class="cb">
+      <div class="ctl" style="margin-bottom:10px">
+        <button class="btn" id="run">Resume</button>
+        <button class="btn2" id="reset">Reset</button>
+        <span class="meta" id="clock">06:14:31.172</span>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch">Decision gate</div>
+    <div class="cb">
+      <dl class="kv">
+        <dt>mode</dt><dd id="g-mode">NOTIFY_CONFIRM</dd>
+        <dt>permission</dt><dd><span class="pill p-bad">none on file</span></dd>
+        <dt>shift</dt><dd>SHF-8841207</dd>
+        <dt>key</dt><dd>4f2a9c…e1</dd>
+        <dt>filters</dt><dd><span class="pill p-ok">4 of 4 pass</span></dd>
+        <dt>clash</dt><dd>none</dd>
+      </dl>
+      <p class="note" style="margin:12px 0 0">AUTO is refused in code, not by
+      convention. <code>ShiftMonitor.__init__</code> raises <code>PermissionError</code>
+      unless a written permission reference is set. Asset 09 tests that.</p>
+      <div class="ctl" style="margin-top:10px">
+        <button class="btn2" id="tryauto">Try switching to AUTO</button>
+      </div>
+      <div id="autoerr" hidden style="margin-top:9px">
+        <pre style="margin:0">PermissionError: AUTO mode requires
+permission_reference: the written approval
+from Randstad described in clause 3.3.</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Shifts seen this session</h3>
+<div class="card"><div class="scroll"><table>
+<thead><tr><th>Shift</th><th>Site</th><th>When</th><th>Dist</th><th>Band</th><th>State</th><th>Reason</th></tr></thead>
+<tbody id="shifts"></tbody>
+</table></div></div>
+<p class="note" style="margin-top:10px">Four of the six were suppressed, and that is the
+system working. A monitor that pushes everything is a monitor you turn off in a week.</p>
+</section>
+
+<!-- ============ LATENCY ============ -->
+<section id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+<h2>Detection delay is a poll-rate decision</h2>
+<p class="note">Once a shift appears, your delay is on average half the poll interval
+and at worst the full interval. Everything after that is fast and roughly fixed. Move
+the slider: the trade is detection delay against requests per day.</p>
+
+<div class="card"><div class="cb">
+  <div class="ctl" style="justify-content:space-between">
+    <label for="iv" style="font-weight:600;font-size:13px">Poll interval</label>
+    <span class="meta" id="ivlab">60 s</span>
+  </div>
+  <input type="range" id="iv" min="0" max="6" step="1" value="3">
+  <div class="stats" style="margin-top:12px">
+    <div class="stat"><div class="big" id="o-avg">30 s</div><div class="bigl">avg detection delay</div></div>
+    <div class="stat"><div class="big" id="o-worst">60 s</div><div class="bigl">worst case</div></div>
+    <div class="stat"><div class="big" id="o-req">1,440</div><div class="bigl">checks per day</div></div>
+    <div class="stat"><div class="big" id="o-tot">47 s</div><div class="bigl">release to accepted</div></div>
+  </div>
+  <h3>Where that total goes</h3>
+  <div class="bar"><i class="w" id="b-w" style="width:62%"></i><i class="h" id="b-h" style="width:33%"></i><i class="s" id="b-s" style="width:5%"></i></div>
+  <div class="legend">
+    <span><i style="background:var(--warn)"></i>poll wait <b id="l-w">29.1 s</b></span>
+    <span><i style="background:var(--acc)"></i>you tapping <b id="l-h">15.5 s</b></span>
+    <span><i style="background:var(--ok)"></i>software <b id="l-s">2.7 s</b></span>
+  </div>
+  <p class="note" id="verdict" style="margin-top:12px"></p>
+</div></div>
+
+<div class="grid g2" style="margin-top:12px">
+<div class="card"><div class="ch">Fixed costs after detection</div><div class="cb">
+<dl class="kv">
+  <dt>diff the listing</dt><dd>under 100 ms</dd>
+  <dt>evaluate filters</dt><dd>under 10 ms</dd>
+  <dt>deliver push</dt><dd>1–3 s</dd>
+  <dt>you tap confirm</dt><dd>5–30 s if awake</dd>
+  <dt>submit acceptance</dt><dd>under 1 s</dd>
+</dl></div></div>
+<div class="card"><div class="ch">The honest limit</div><div class="cb">
+<p class="note" style="margin:0">If shifts at your sites are gone in under ten seconds,
+no polling design wins reliably and you need an approved push feed instead. If they
+survive a minute or two, a one-minute poll solves your problem outright.</p>
+<p class="note" style="margin:10px 0 0"><b>We measure which, in week one, before the
+build commits to anything.</b> That measurement is the first deliverable.</p>
+</div></div>
+</div>
+</section>
+
+<!-- ============ PERMISSION ============ -->
+<section id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+<h2>Your hedge is the whole project</h2>
+<p class="note">Your post ends "subject to Randstad's permitted access and usage rules".
+That clause is doing more work than anything else in the brief, so I went and read them.</p>
+
+<div class="card"><div class="ch">Randstad terms and conditions, clause 3.3</div><div class="cb">
+<blockquote>"automated searches, spidering, using intelligent agents"</blockquote>
+<p class="note">listed among uses <b>"not permitted without prior approval from
+Randstad N.V."</b>, and that use outside the permitted purposes</p>
+<blockquote>"(ii) may constitute to intellectual property right infringement, be a
+criminal offence or give rise to claim for damages."</blockquote>
+<p class="note" style="margin-bottom:0">Clause 2.4 is the commercially relevant one.
+Randstad <b>"reserves the right to and may, at any time and without prior notice, (i)
+terminate or limit such access and use"</b>. The account is your income. That is the
+risk worth naming out loud before you spend anything.</p>
+</div></div>
+
+<h3>Confidence</h3>
+<div class="card"><div class="cb">
+<p class="note" style="margin:0">These are the terms published on the Randstad corporate
+site. Whether they are the governing document for the Scheduler app specifically is the
+one thing I could not settle from outside — the app presents its own terms at signup,
+and those are inside your account. <b>Send me a screenshot and this moves from likely
+to certain in ten minutes.</b> I would rather tell you that than pretend I know.</p>
+</div></div>
+
+<h3>Three surfaces, three verdicts</h3>
+<div class="card"><div class="scroll"><table>
+<thead><tr><th>Surface</th><th>Continuous?</th><th>Fast?</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td class="strike">Browser version</td><td>—</td><td>—</td><td><span class="pill p-bad">does not exist</span></td></tr>
+<tr><td>iPhone app, on device</td><td>no, iOS suspends</td><td>no</td><td><span class="pill p-warn">not continuous</span></td></tr>
+<tr class="hl"><td>The app's own backend</td><td>yes</td><td>yes</td><td><span class="pill p-acc">viable, permission-gated</span></td></tr>
+</tbody></table></div></div>
+
+<h3>What I will not build</h3>
+<div class="card"><div class="cb">
+<ul>
+<li><b>Nothing that defeats a bot control.</b> No device-fingerprint spoofing, no CAPTCHA
+solving, no pretending a server is your phone. Scheduler's own privacy declaration says
+it collects a device ID linked to your identity, so that fight is one you lose slowly
+and then all at once.</li>
+<li><b>No faster-than-told polling.</b> A <code>429</code> with <code>Retry-After</code>
+is honoured exactly.</li>
+<li><b>No auto-accept without written permission.</b> Enforced in code.</li>
+</ul>
+<p class="note" style="margin-bottom:0">This is not caution for its own sake. A build that
+gets your account closed has negative value, and you cannot appeal your way back into
+a week's work.</p>
+</div></div>
+
+<h3>The request that costs nothing</h3>
+<div class="card"><div class="cb">
+<p class="note">Ten minutes, and its answer decides the shape of the build. Full text is
+in asset 02, ready to send.</p>
+<pre>Clause 3.3 of Randstad's terms says automated searches and intelligent
+agents need prior approval, so I am asking for that rather than assuming it.
+
+ 1. Is there an approved way to get faster notification of shifts released
+    to me, such as an alerts setting, an email feed or an API?
+ 2. If not, would you permit a read-only check of my own account at a
+    stated rate, in writing?
+ 3. Is Scheduler being replaced by the Randstad UK: Jobs For You app?</pre>
+<p class="note" style="margin-bottom:0">Three outcomes, all useful. <b>Yes in writing</b>
+means the fast build is safe. <b>A pointer to a setting</b> may solve it for nothing.
+<b>No</b> means you keep notify-and-confirm, which stays inside normal app use.</p>
+</div></div>
+</section>
+
+<!-- ============ WHAT I CHECKED ============ -->
+<section id="p4" role="tabpanel" aria-labelledby="t4" hidden>
+<h2>The investigation you asked for, done before the quote</h2>
+<p class="note">You asked for this before development starts. Here it is, with the method,
+so you can repeat any of it.</p>
+
+<h3>1. There is no browser version</h3>
+<p class="note">Any public HTTPS service needs a certificate, and certificates are logged
+publicly. So rather than guessing addresses I pulled every hostname under
+<code>randstad.co.uk</code> from certificate transparency logs. <b>50 exist. None is a
+worker shift portal.</b></p>
+<div class="card"><div class="scroll"><table>
+<thead><tr><th>Hostname</th><th>What it actually is</th></tr></thead>
+<tbody>
+<tr><td>timesheets</td><td>InTime timesheet login — for after a shift, not for claiming one</td></tr>
+<tr><td>irelandtimesheets</td><td>the same, Ireland</td></tr>
+<tr><td>businesssupportportal · publicservicesportal · swsportal · financeserviceportal</td><td>internal and client service portals</td></tr>
+<tr><td>yourspace · mydevelopment · hrsharedservices · itsupport · facilities · legal</td><td>Randstad staff intranet and internal tools</td></tr>
+<tr><td>fortiauthenticator · fortiguest · guestgateway · remote · webaccess</td><td>corporate network access</td></tr>
+<tr><td>gr8people · optima · optimacareers</td><td>recruitment and ATS</td></tr>
+<tr><td>e · email · mail · smscomms</td><td>messaging</td></tr>
+</tbody></table></div></div>
+<p class="note" style="margin-top:10px">Two near-misses I chased and ruled out, so nobody
+repeats the work. <code>connect.randstad.com</code> looked right because the app's bundle
+id is <code>uk.co.randstad.connect</code> — it is <b>Happeo</b>, Randstad's staff intranet,
+posting to <code>login.happeo.com/saml</code>. And <code>timesheets.randstad.co.uk</code>
+is <b>InTime</b>.</p>
+<p class="note"><b>So browser automation is off the table</b>, and that is one of the five
+skills your post asks for. Any bid offering Selenium against "the web version" has not
+checked whether one exists.</p>
+
+<h3>2. Randstad UK has two worker apps</h3>
+<div class="card"><div class="scroll"><table>
+<thead><tr><th></th><th>Randstad Scheduler</th><th>Randstad UK: Jobs For You</th></tr></thead>
+<tbody>
+<tr><td>App Store id</td><td>6504849836</td><td>6759321200</td></tr>
+<tr><td>bundle</td><td>uk.co.randstad.connect</td><td>exchange.ondemand.uk.randstad.worker</td></tr>
+<tr><td>published by</td><td>Randstad UK Holding Limited</td><td><b>Swipejobs Pty Ltd</b></td></tr>
+<tr><td>first released</td><td>10 Jul 2024</td><td><b>4 Mar 2026</b></td></tr>
+<tr><td>latest</td><td>1.15 · 7 Sep 2026</td><td>1.2.1 · 27 Oct 2026</td></tr>
+<tr><td>rating</td><td><span class="pill p-bad">1.8 from 18</span></td><td><span class="pill p-warn">2.5 from 12</span></td></tr>
+</tbody></table></div></div>
+<p class="note" style="margin-top:10px">The newer one is published by Swipejobs, a
+third-party workforce platform, not by Randstad. Its Play listing says the product is
+"rapidly expanding across the US", so it is a platform Randstad has adopted.</p>
+<p class="note"><b>The open question, and I want to be straight that it is open.</b> I found
+no announcement from either company about migration or a retirement date. It is reasonable
+to wonder whether Scheduler is being replaced. It is not reasonable for me to tell you it
+is. Building against an app you may not be on next year is a real risk, and your consultant
+can answer it in one question.</p>
+
+<h3>3. Your own evidence</h3>
+<p class="note">Scheduler sits at 1.8 stars. A public review of the Android build says
+alerts arrive too late and the work is gone before the worker sees it. Version 1.15's
+release note reads, in full: <i>"In addition to some bug fixes and improvements, the app
+now allows for new login experiences for new users."</i></p>
+<p class="note">You are not trying to game anything. You are trying to be told about your
+own available work quickly enough to answer. That framing matters, because it is the one
+a permission request can actually succeed with.</p>
+
+<footer>Sources: Apple App Store and Google Play public listings · crt.sh certificate
+transparency · randstad.co.uk/robots.txt · Randstad terms and conditions clauses 2.4 and
+3.3 · all retrieved 3 November 2026. No account was accessed. No figure on this page was
+measured against a live system.</footer>
+</section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var tabs=[].slice.call(document.querySelectorAll('nav [role=tab]'));
+function show(id){
+  tabs.forEach(function(t){
+    var sel=t.id===id, p=document.getElementById(t.getAttribute('aria-controls'));
+    t.setAttribute('aria-selected',sel?'true':'false');
+    p.hidden=!sel;
+  });
+}
+tabs.forEach(function(t){t.addEventListener('click',function(){show(t.id);});});
+
+var root=document.documentElement, tg=document.getElementById('theme');
+function cur(){
+  var a=root.getAttribute('data-theme');
+  if(a) return a;
+  return window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+}
+function paint(){ tg.textContent = cur()==='dark' ? 'light' : 'dark'; }
+tg.addEventListener('click',function(){
+  root.setAttribute('data-theme', cur()==='dark'?'light':'dark'); paint();
+});
+paint();
+
+/* ---------- monitor ---------- */
+var SHIFTS=[
+ ['SHF-8841207','Wakefield DC2','Wed 22:00–06:00','11.4','B','hl','NOTIFIED','awaiting your confirmation'],
+ ['SHF-8841990','Wakefield DC2','Wed 20:00–04:00','11.4','B','','SUPPRESSED','clash with SHF-8841207'],
+ ['SHF-8842100','Leeds XD','Tue 14:00–22:00','9.0','A','','SUPPRESSED','rate band A not in [B, C]'],
+ ['SHF-8842255','Hull RDC','Thu 06:00–14:00','48.2','C','','SUPPRESSED','distance 48.2 > 20.0'],
+ ['SHF-8842301','Wakefield DC2','Fri 22:00–06:00','11.4','C','','SEEN','held, outside quiet hours'],
+ ['SHF-8841207','Wakefield DC2','Wed 22:00–06:00','11.4','B','','SUPPRESSED','duplicate, key already seen']
+];
+function cls(s){return s==='NOTIFIED'?'p-acc':s==='ACCEPTED'?'p-ok':s==='SEEN'?'p-mute':'p-mute';}
+var tb=document.getElementById('shifts');
+SHIFTS.forEach(function(r){
+  var tr=document.createElement('tr');
+  if(r[5]) tr.className=r[5];
+  tr.innerHTML='<td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td>'+r[4]
+    +'</td><td><span class="pill '+cls(r[6])+'">'+r[6]+'</span></td><td>'+r[7]+'</td>';
+  tb.appendChild(tr);
+});
+
+var LINES=[
+ ['06:14:31.118','a','poll #2041  GET listing -> 200 in 118 ms  (14 shifts)'],
+ ['06:14:31.120','','diff vs snapshot: +1 -0   NEW SHF-8841207'],
+ ['06:14:31.164','g','filters 4/4 pass   dist 11.4<=20.0  band B  no clash  site ok'],
+ ['06:14:31.170','','idempotency key 4f2a9c…e1 written before any outbound action'],
+ ['06:14:31.172','w','gate -> NOTIFY_CONFIRM   (no permission reference configured)'],
+ ['06:14:33.401','a','push delivered via ntfy in 2.23 s'],
+ ['06:14:48.902','','confirm tapped on device'],
+ ['06:14:49.330','g','submit -> 200 accepted   total 47.3 s from release'],
+ ['06:15:31.004','','poll #2042  -> 200  diff +0 -0   SHF-8841207 still listed'],
+ ['06:15:31.006','','key 4f2a9c…e1 already seen -> SUPPRESSED, not re-notified'],
+ ['06:16:31.233','b','poll #2043  -> 503 Service Unavailable'],
+ ['06:16:31.234','w','backoff 1/4  sleeping 41 s  (full jitter, ceiling 60 s)'],
+ ['06:17:12.880','b','poll #2044  -> 429  Retry-After: 120'],
+ ['06:17:12.881','w','honouring Retry-After exactly: sleeping 120 s'],
+ ['06:19:13.004','g','poll #2045  -> 200  recovered  diff +0 -0'],
+ ['06:21:44.610','','poll #2047  diff +1   NEW SHF-8841990'],
+ ['06:21:44.655','w','SUPPRESSED  clash with accepted SHF-8841207 (22:00–06:00)']
+];
+var log=document.getElementById('log'), i=0, timer=null;
+var runBtn=document.getElementById('run'), meta=document.getElementById('logmeta'),
+    clock=document.getElementById('clock');
+function emit(n){
+  var l=LINES[n], d=document.createElement('div');
+  d.innerHTML='<span class="t">'+l[0]+'</span>  <span class="'+l[1]+'">'+l[2]+'</span>';
+  log.appendChild(d); log.scrollTop=log.scrollHeight; clock.textContent=l[0];
+}
+function reset(){
+  stop(); log.innerHTML=''; i=0;
+  for(;i<5;i++) emit(i);
+  meta.textContent='tick 2041 · paused';
+  runBtn.textContent='Resume'; runBtn.disabled=false;
+}
+function stop(){ if(timer){clearInterval(timer);timer=null;} }
+function run(){
+  if(timer){stop();runBtn.textContent='Resume';meta.textContent='paused';return;}
+  if(i>=LINES.length) return;
+  runBtn.textContent='Pause'; meta.textContent='running';
+  timer=setInterval(function(){
+    if(i>=LINES.length){stop();runBtn.textContent='Done';runBtn.disabled=true;
+      meta.textContent='tick 2047 · end of sample';return;}
+    emit(i++);
+  },520);
+}
+runBtn.addEventListener('click',run);
+document.getElementById('reset').addEventListener('click',reset);
+reset();
+
+document.getElementById('tryauto').addEventListener('click',function(){
+  var e=document.getElementById('autoerr'); e.hidden=!e.hidden;
+});
+
+/* ---------- latency ---------- */
+var IV=[10,15,30,60,120,300,900];
+function fmt(s){ return s<60 ? s.toFixed(0)+' s'
+  : (s%60===0 ? (s/60)+' m' : Math.floor(s/60)+'m '+Math.round(s%60)+'s'); }
+function calc(){
+  var p=IV[+document.getElementById('iv').value];
+  var avg=p/2, worst=p, req=Math.round(86400/p);
+  var human=15.5, soft=2.7, tot=avg+human+soft;
+  document.getElementById('ivlab').textContent=fmt(p);
+  document.getElementById('o-avg').textContent=fmt(avg);
+  document.getElementById('o-worst').textContent=fmt(worst);
+  document.getElementById('o-req').textContent=req.toLocaleString('en-GB');
+  document.getElementById('o-tot').textContent=fmt(tot);
+  var w=avg/tot*100, h=human/tot*100, s=soft/tot*100;
+  document.getElementById('b-w').style.width=w+'%';
+  document.getElementById('b-h').style.width=h+'%';
+  document.getElementById('b-s').style.width=s+'%';
+  document.getElementById('l-w').textContent=fmt(avg)+' ('+w.toFixed(0)+'%)';
+  document.getElementById('l-h').textContent='15.5 s ('+h.toFixed(0)+'%)';
+  document.getElementById('l-s').textContent='2.7 s ('+s.toFixed(0)+'%)';
+  var v=document.getElementById('verdict');
+  if(p<=15) v.innerHTML='At '+fmt(p)+' you are making <b>'+req.toLocaleString('en-GB')+
+    ' requests a day</b> against someone else’s service. That is the rate most likely '+
+    'to be noticed, and the one least likely to be approved. It needs permission in writing.';
+  else if(p<=60) v.innerHTML='<b>The recommended band.</b> '+req.toLocaleString('en-GB')+
+    ' checks a day is roughly one a minute, defensible to ask for, and detection stays '+
+    'under '+fmt(worst)+' worst case.';
+  else v.innerHTML='Gentle on the service, but a worst case of <b>'+fmt(worst)+
+    '</b> means popular shifts will be gone. Worth it only if your sites are slow movers, '+
+    'which is what week one measures.';
+}
+document.getElementById('iv').addEventListener('input',calc);
+calc();
+})();
+</script>
+
+</body>
+</html>
